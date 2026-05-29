@@ -325,7 +325,7 @@ function updateVariation(pid, idx, value) {
     card.querySelector('.var-val').textContent = Math.round(c.variation) + '%';
     const { colorA, colorB } = getEntryColors(c);
     const swatch = card.querySelector('.mini-swatch');
-    if (swatch) swatch.style.background = 'linear-gradient(to right,' + colorA + ',' + colorB + ')';
+    if (swatch) swatch.style.background = 'linear-gradient(to bottom,' + colorA + ',' + colorB + ')';
   }
   renderAll();
 }
@@ -385,7 +385,7 @@ function renderPalette() {
       '  <input type="range" min="0" max="100" value="' + c.variation + '" oninput="updateVariation(\'' + p.id + '\',' + i + ',this.value)">',
       '  <span class="var-val">' + Math.round(c.variation) + '%</span>',
       '</div>',
-      '<div class="mini-swatch" style="background:linear-gradient(to right,' + colorA + ',' + colorB + ')"></div>',
+      '<div class="mini-swatch" style="background:linear-gradient(to bottom,' + colorA + ',' + colorB + ')"></div>',
     ].join('');
     el.appendChild(card);
   });
@@ -432,11 +432,11 @@ function renderStripeRow(ctx, entries, y, rowH, barX, barW) {
     ctx.fillRect(x0, y, x1 - x0 - 1, headerH - 2);
     ctx.fillStyle = "#aaa";
     ctx.fillText(entries[s].name, midX, y + 9);
-    for (let x = x0; x < x1 && x < barX + barW; x++) {
-      const t = (x - x0) / (x1 - x0 - 1 || 1);
+    for (let dy = 0; dy < barH - 2; dy++) {
+      const t = dy / (barH - 3 || 1);
       const [r,g,b] = sampleEntryGradient(entries[s], t);
       ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-      ctx.fillRect(x, barY + 1, 1, barH - 2);
+      ctx.fillRect(x0, barY + 1 + dy, x1 - x0, 1);
     }
   }
 }
@@ -460,14 +460,14 @@ function renderCircleRow(ctx, entries, y, rowH, barX, barW) {
     ctx.fillStyle = "#aaa";
     ctx.fillText(entries[s].name, cx, y + 9);
     for (let dy = -Math.ceil(radius); dy <= Math.ceil(radius); dy++) {
+      const t = (dy + radius) / (2 * radius);
+      const [r, g, b] = sampleEntryGradient(entries[s], t);
       for (let dx = -Math.ceil(radius); dx <= Math.ceil(radius); dx++) {
         const px = Math.round(cx + dx);
         const py = Math.round(cy + dy);
         if (px < barX || px >= barX + barW || py < circY || py >= circY + circH) continue;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > radius) continue;
-        const t = dist / radius;
-        const [r, g, b] = sampleEntryGradient(entries[s], t);
         ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
         ctx.fillRect(px, py, 1, 1);
       }
