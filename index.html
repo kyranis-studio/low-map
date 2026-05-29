@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Low Poly Palette Generator</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; }
+.container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+h1 { font-size: 1.5rem; color: #fff; margin-bottom: 2px; }
+.subtitle { color: #888; margin-bottom: 12px; font-size: 0.85rem; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+header .actions { display: flex; gap: 8px; }
+.preset-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; align-items: stretch; }
+.preset-tab { background: #0f3460; border: 1px solid #444; color: #bbb; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
+.preset-tab:hover { border-color: #e94560; color: #fff; }
+.preset-tab.active { background: #e94560; border-color: #e94560; color: #fff; }
+.preset-tab .close-btn { background: none; border: none; color: inherit; cursor: pointer; font-size: 0.8rem; opacity: 0.6; padding: 0 2px; line-height: 1; }
+.preset-tab .close-btn:hover { opacity: 1; }
+.preset-tab .name-input-tab { background: transparent; border: none; color: inherit; font-size: 0.8rem; width: 60px; outline: none; }
+.palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.color-card { background: #16213e; border-radius: 8px; padding: 10px; border: 1px solid #0f3460; }
+.color-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.color-card-header .name-input { background: transparent; border: 1px solid #555; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 0.85rem; width: 140px; }
+.color-card-header .name-input:focus { outline: none; border-color: #e94560; }
+.color-card-controls { display: flex; gap: 3px; }
+.color-card-controls button { background: #0f3460; border: none; color: #fff; cursor: pointer; border-radius: 3px; width: 24px; height: 24px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+.color-card-controls button:hover { background: #e94560; }
+.color-card-controls button.danger:hover { background: #c0392b; }
+.color-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
+.color-row label { font-size: 0.75rem; color: #888; width: 30px; flex-shrink: 0; }
+.color-pick-group { display: flex; align-items: center; gap: 4px; }
+.color-pick-group input[type="color"] { width: 34px; height: 28px; border: none; border-radius: 3px; cursor: pointer; background: transparent; padding: 0; }
+.color-pick-group input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-pick-group input[type="color"]::-webkit-color-swatch { border: 1px solid #555; border-radius: 3px; }
+.color-pick-group .hex-input { background: transparent; border: 1px solid #555; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 0.78rem; width: 70px; font-family: monospace; }
+.color-pick-group .hex-input:focus { outline: none; border-color: #e94560; }
+.var-row { display: flex; gap: 10px; align-items: center; }
+.var-row label { font-size: 0.75rem; color: #888; width: 30px; flex-shrink: 0; }
+.var-row input[type="range"] { flex: 1; min-width: 60px; accent-color: #e94560; height: 4px; }
+.var-row .var-val { font-size: 0.78rem; color: #aaa; width: 30px; text-align: right; font-family: monospace; }
+.mini-swatch { width: 100%; height: 10px; border-radius: 2px; border: 1px solid #333; margin-top: 3px; }
+.add-btn { background: #0f3460; border: 1px dashed #e94560; color: #e94560; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; text-align: center; width: 100%; margin-bottom: 16px; }
+.add-btn:hover { background: #1a3a6a; }
+.tabs { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid #333; }
+.tab { padding: 8px 18px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 0.85rem; border-bottom: 2px solid transparent; }
+.tab:hover { color: #ccc; }
+.tab.active { color: #e94560; border-bottom-color: #e94560; }
+.tab-content { display: none; padding: 12px 0; }
+.tab-content.active { display: block; }
+.preview-canvas-wrap { background: #16213e; border-radius: 8px; padding: 12px; border: 1px solid #0f3460; margin-bottom: 16px; }
+.preview-canvas-wrap canvas { width: 100%; border-radius: 4px; border: 1px solid #333; display: block; }
+.export-section { background: #16213e; border-radius: 8px; padding: 14px; border: 1px solid #0f3460; }
+.export-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.export-row label { font-size: 0.8rem; color: #aaa; }
+.export-row input[type="number"] { background: transparent; border: 1px solid #555; color: #fff; padding: 3px 6px; border-radius: 4px; width: 65px; font-size: 0.82rem; }
+.export-row input[type="number"]:focus { outline: none; border-color: #e94560; }
+.export-row select { background: #0f3460; border: 1px solid #555; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 0.82rem; }
+.btn { background: #e94560; color: #fff; border: none; padding: 6px 16px; border-radius: 5px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+.btn:hover { background: #d63851; }
+.btn-secondary { background: #0f3460; }
+.btn-secondary:hover { background: #1a3a6a; }
+input[type="file"] { display: none; }
+.preset-actions { display: flex; gap: 6px; margin-bottom: 10px; }
+.preset-actions button { background: #0f3460; border: 1px solid #444; color: #bbb; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; }
+.preset-actions button:hover { border-color: #e94560; color: #fff; }
+.empty-msg { color: #666; text-align: center; padding: 20px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>&#x25B2; Low Poly Palette Generator</h1>
+      <div class="subtitle">Gradient color textures for d3 game terrain</div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="saveAll()">Save</button>
+      <button class="btn btn-secondary" onclick="loadAll()">Load</button>
+      <button class="btn btn-secondary" onclick="restoreDefaults()">Restore</button>
+      <input type="file" id="fileInput" accept=".json" onchange="handleFile(event)">
+    </div>
+  </header>
+
+  <div id="presetTabs" class="preset-tabs"></div>
+
+  <div id="presetActions" class="preset-actions"></div>
+
+  <div id="palette" class="palette-grid"></div>
+  <button class="add-btn" onclick="addColorToActive()">+ Add Color</button>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="stripes" onclick="switchPreviewTab('stripes')">Stripes</button>
+    <button class="tab" data-tab="circles" onclick="switchPreviewTab('circles')">Circles</button>
+  </div>
+
+  <div id="tab-stripes" class="tab-content active preview-canvas-wrap">
+    <canvas id="previewStripes" height="80"></canvas>
+  </div>
+  <div id="tab-circles" class="tab-content preview-canvas-wrap">
+    <canvas id="previewCircles" height="120"></canvas>
+  </div>
+
+  <div class="export-section">
+    <div class="export-row">
+      <label>Width:</label><input type="number" id="expW" value="512" min="16" max="4096">
+      <label>Shape:</label>
+      <select id="expShape">
+        <option value="stripe">Stripe</option>
+        <option value="sphere">Spherical</option>
+      </select>
+      <button class="btn" onclick="exportPNG()">Export PNG</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function hexToRgb(h) {
+  const r = parseInt(h.slice(1,3), 16);
+  const g = parseInt(h.slice(3,5), 16);
+  const b = parseInt(h.slice(5,7), 16);
+  return [r,g,b];
+}
+
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2,'0')).join('');
+}
+
+function lerp(a,b,t) { return a + (b-a)*t; }
+
+function computeGradient(base, variation) {
+  const p = variation / 100;
+  const [br, bg, bb] = hexToRgb(base);
+  const colorA = rgbToHex(lerp(br, 255, p), lerp(bg, 255, p), lerp(bb, 255, p));
+  const colorB = rgbToHex(lerp(br, 0, p), lerp(bg, 0, p), lerp(bb, 0, p));
+  return { colorA, colorB };
+}
+
+function getEntryColors(entry) {
+  return computeGradient(entry.base, entry.variation);
+}
+
+function sampleEntryGradient(entry, t) {
+  const { colorA, colorB } = getEntryColors(entry);
+  const [r1,g1,b1] = hexToRgb(colorA);
+  const [r2,g2,b2] = hexToRgb(colorB);
+  return [lerp(r1,r2,t), lerp(g1,g2,t), lerp(b1,b2,t)];
+}
+
+const INITIAL_PRESETS = [
+  { name: "Terrain", colors: [
+    { name: "Snow", base: "#e8f0ff", variation: 18 },
+    { name: "Rock", base: "#7a7a7a", variation: 28 },
+    { name: "Dirt", base: "#8a7355", variation: 20 },
+    { name: "Grass", base: "#4a8c3f", variation: 25 },
+    { name: "Sand", base: "#e8d8a0", variation: 15 },
+    { name: "Water", base: "#3a8fc9", variation: 30 },
+  ]},
+  { name: "Ocean", colors: [
+    { name: "Shallow", base: "#80c8e8", variation: 22 },
+    { name: "Light", base: "#4098c8", variation: 25 },
+    { name: "Medium", base: "#2068a0", variation: 30 },
+    { name: "Deep", base: "#0a3868", variation: 35 },
+    { name: "Abyss", base: "#041028", variation: 40 },
+  ]},
+  { name: "Arctic", colors: [
+    { name: "Ice Bright", base: "#e8f4ff", variation: 12 },
+    { name: "Ice", base: "#b0d0e8", variation: 20 },
+    { name: "Snow Rock", base: "#708098", variation: 22 },
+    { name: "Dark Rock", base: "#384858", variation: 28 },
+    { name: "Frozen Water", base: "#1a4a6a", variation: 30 },
+  ]},
+  { name: "Desert", colors: [
+    { name: "Sun", base: "#f0e0a8", variation: 12 },
+    { name: "Sand Light", base: "#dcc890", variation: 18 },
+    { name: "Sand", base: "#c0a870", variation: 22 },
+    { name: "Sand Dark", base: "#a08850", variation: 25 },
+    { name: "Cactus", base: "#3a6a2a", variation: 20 },
+    { name: "Rock", base: "#6a5a42", variation: 18 },
+  ]},
+  { name: "Forest", colors: [
+    { name: "Canopy", base: "#1a5a0a", variation: 30 },
+    { name: "Leaf", base: "#3a8a2a", variation: 28 },
+    { name: "Moss", base: "#5aaa4a", variation: 22 },
+    { name: "Trunk", base: "#5a3a1a", variation: 20 },
+    { name: "Trunk Dark", base: "#3a1a0a", variation: 25 },
+    { name: "Pond", base: "#2a6a8a", variation: 25 },
+  ]},
+  { name: "Fire", colors: [
+    { name: "White Hot", base: "#ffeeaa", variation: 20 },
+    { name: "Yellow", base: "#ffaa00", variation: 22 },
+    { name: "Orange", base: "#ff5500", variation: 25 },
+    { name: "Red", base: "#cc2200", variation: 28 },
+    { name: "Dark Ember", base: "#550800", variation: 30 },
+    { name: "Char", base: "#150808", variation: 35 },
+  ]},
+  { name: "Modern", colors: [
+    { name: "Glass Blue", base: "#80c0d8", variation: 15 },
+    { name: "Steel", base: "#9098a0", variation: 15 },
+    { name: "Concrete", base: "#b0b0b0", variation: 12 },
+    { name: "White Panel", base: "#d8d8d8", variation: 12 },
+    { name: "Dark Tint", base: "#283040", variation: 25 },
+    { name: "Accent Red", base: "#c03030", variation: 20 },
+  ]},
+  { name: "Medieval", colors: [
+    { name: "Stone Wall", base: "#7a7060", variation: 18 },
+    { name: "Dark Stone", base: "#5a5040", variation: 18 },
+    { name: "Wood Beam", base: "#705030", variation: 22 },
+    { name: "Roof Tile", base: "#904028", variation: 22 },
+    { name: "Plaster", base: "#c8b8a0", variation: 14 },
+    { name: "Iron Gate", base: "#404040", variation: 22 },
+  ]},
+  { name: "Industrial", colors: [
+    { name: "Corrugated", base: "#687078", variation: 18 },
+    { name: "Rust", base: "#a05028", variation: 25 },
+    { name: "Pipe Gray", base: "#606060", variation: 18 },
+    { name: "Warning Yellow", base: "#d0a818", variation: 20 },
+    { name: "Safety Blue", base: "#1858a0", variation: 25 },
+    { name: "Oil Stain", base: "#1a1a1a", variation: 30 },
+  ]},
+  { name: "Metallic", colors: [
+    { name: "Gold", base: "#d4a030", variation: 25 },
+    { name: "Silver", base: "#b0b8c0", variation: 20 },
+    { name: "Bronze", base: "#a07030", variation: 22 },
+    { name: "Copper", base: "#b06030", variation: 25 },
+    { name: "Chrome", base: "#c8d0d8", variation: 15 },
+    { name: "Gunmetal", base: "#384048", variation: 30 },
+  ]},
+  { name: "Syfy", colors: [
+    { name: "Neon Cyan", base: "#00ddff", variation: 20 },
+    { name: "Neon Pink", base: "#ff0088", variation: 18 },
+    { name: "Neon Green", base: "#00ff66", variation: 20 },
+    { name: "Hologram", base: "#8866ff", variation: 22 },
+    { name: "Shield Blue", base: "#0044cc", variation: 25 },
+    { name: "Void Black", base: "#0a0a12", variation: 35 },
+  ]},
+];
+
+let presets = [];
+let activePresetId = null;
+let nextId = 1;
+
+function getPresetById(id) { return presets.find(p => p.id === id); }
+
+function addPreset(name) {
+  const id = "p" + (nextId++);
+  presets.push({ id, name, colors: [] });
+  activePresetId = id;
+  renderPresetTabs();
+  renderPalette();
+}
+
+function removePreset(id) {
+  if (presets.length <= 1) return;
+  const idx = presets.findIndex(p => p.id === id);
+  presets.splice(idx, 1);
+  if (activePresetId === id) {
+    activePresetId = presets[Math.min(idx, presets.length - 1)].id;
+  }
+  renderPresetTabs();
+  renderPalette();
+}
+
+function renamePreset(id, name) {
+  const p = getPresetById(id);
+  if (p) p.name = name;
+  renderPresetTabs();
+}
+
+function setActivePreset(id) {
+  activePresetId = id;
+  renderPresetTabs();
+  renderPalette();
+}
+
+function addColorToActive() {
+  const p = getPresetById(activePresetId);
+  if (!p) return;
+  p.colors.push({ name: "New Color", base: "#808080", variation: 20 });
+  renderPalette();
+  renderAll();
+}
+
+function removeColor(pid, idx) {
+  const p = getPresetById(pid);
+  if (!p) return;
+  p.colors.splice(idx, 1);
+  renderPalette();
+  renderAll();
+}
+
+function moveColor(pid, idx, dir) {
+  const p = getPresetById(pid);
+  if (!p) return;
+  const j = idx + dir;
+  if (j < 0 || j >= p.colors.length) return;
+  [p.colors[idx], p.colors[j]] = [p.colors[j], p.colors[idx]];
+  renderPalette();
+  renderAll();
+}
+
+function updateColor(pid, idx, field, value) {
+  const p = getPresetById(pid);
+  if (!p) return;
+  const c = p.colors[idx];
+  if (field === 'base') {
+    c.base = value.startsWith('#') ? value : '#' + value;
+  } else if (field === 'variation') {
+    c.variation = Math.max(0, Math.min(100, parseFloat(value) || 0));
+  } else {
+    c.name = value;
+  }
+  renderPalette();
+  renderAll();
+}
+
+function updateVariation(pid, idx, value) {
+  const p = getPresetById(pid);
+  if (!p) return;
+  const c = p.colors[idx];
+  c.variation = Math.max(0, Math.min(100, parseFloat(value) || 0));
+  const card = document.getElementById('palette').children[idx];
+  if (card) {
+    card.querySelector('.var-val').textContent = Math.round(c.variation) + '%';
+    const { colorA, colorB } = getEntryColors(c);
+    const swatch = card.querySelector('.mini-swatch');
+    if (swatch) swatch.style.background = 'linear-gradient(to right,' + colorA + ',' + colorB + ')';
+  }
+  renderAll();
+}
+
+function renderPresetTabs() {
+  const el = document.getElementById('presetTabs');
+  el.innerHTML = '';
+  presets.forEach(p => {
+    const tab = document.createElement('button');
+    tab.className = 'preset-tab' + (p.id === activePresetId ? ' active' : '');
+    tab.innerHTML = '<span>' + p.name + '</span><span class="close-btn" onclick="event.stopPropagation();removePreset(\'' + p.id + '\')">&times;</span>';
+    tab.onclick = () => setActivePreset(p.id);
+    tab.title = 'Click to edit, close to remove';
+    el.appendChild(tab);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'preset-tab';
+  addBtn.textContent = '+ New Slot';
+  addBtn.onclick = () => {
+    const name = prompt("Preset name:", "New Slot");
+    if (name) addPreset(name);
+  };
+  el.appendChild(addBtn);
+}
+
+function renderPalette() {
+  const el = document.getElementById('palette');
+  const actions = document.getElementById('presetActions');
+  const p = getPresetById(activePresetId);
+  if (!p) { el.innerHTML = '<div class="empty-msg">No preset selected</div>'; return; }
+
+  actions.innerHTML = '<button onclick="renameActive()">Rename</button><button onclick="clearColors()">Clear Colors</button>';
+
+  el.innerHTML = '';
+  p.colors.forEach((c, i) => {
+    const { colorA, colorB } = getEntryColors(c);
+    const card = document.createElement('div');
+    card.className = 'color-card';
+    card.innerHTML = [
+      '<div class="color-card-header">',
+      '  <input class="name-input" value="' + c.name.replace(/'/g, "\\'") + '" onchange="updateColor(\'' + p.id + '\',' + i + ',\'name\',this.value)" placeholder="Color name">',
+      '  <div class="color-card-controls">',
+      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',-1)" title="Move left">&lsaquo;</button>',
+      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',1)" title="Move right">&rsaquo;</button>',
+      '    <button class="danger" onclick="removeColor(\'' + p.id + '\',' + i + ')" title="Remove">&times;</button>',
+      '  </div>',
+      '</div>',
+      '<div class="color-row">',
+      '  <label>Base</label>',
+      '  <div class="color-pick-group">',
+      '    <input type="color" value="' + c.base + '" onchange="updateColor(\'' + p.id + '\',' + i + ',\'base\',this.value)">',
+      '    <input class="hex-input" value="' + c.base + '" onchange="updateColor(\'' + p.id + '\',' + i + ',\'base\',this.value)" onfocus="this.select()">',
+      '  </div>',
+      '</div>',
+      '<div class="var-row">',
+      '  <label>Var</label>',
+      '  <input type="range" min="0" max="100" value="' + c.variation + '" oninput="updateVariation(\'' + p.id + '\',' + i + ',this.value)">',
+      '  <span class="var-val">' + Math.round(c.variation) + '%</span>',
+      '</div>',
+      '<div class="mini-swatch" style="background:linear-gradient(to right,' + colorA + ',' + colorB + ')"></div>',
+    ].join('');
+    el.appendChild(card);
+  });
+  if (p.colors.length === 0) {
+    el.innerHTML = '<div class="empty-msg">No colors in this slot. Click "+ Add Color" to add one.</div>';
+  }
+  renderAll();
+}
+
+function renameActive() {
+  const p = getPresetById(activePresetId);
+  if (!p) return;
+  const name = prompt("Rename slot:", p.name);
+  if (name) renamePreset(p.id, name);
+}
+
+function clearColors() {
+  const p = getPresetById(activePresetId);
+  if (!p) return;
+  if (p.colors.length === 0) return;
+  if (!confirm("Remove all colors from this slot?")) return;
+  p.colors = [];
+  renderPalette();
+  renderAll();
+}
+
+const ROW_H = 44;
+const CIRCLEROW_H = 50;
+const LABEL_W = 80;
+const NAME_H = 12;
+
+function renderStripeRow(ctx, entries, y, rowH, barX, barW) {
+  const headerH = NAME_H;
+  const barH = rowH - headerH;
+  const barY = y + headerH;
+  const segW = barW / (entries.length || 1);
+  ctx.font = "9px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  for (let s = 0; s < entries.length; s++) {
+    const x0 = Math.floor(barX + s * segW);
+    const x1 = Math.floor(barX + (s + 1) * segW);
+    const midX = (x0 + x1) / 2;
+    ctx.fillStyle = "#111118";
+    ctx.fillRect(x0, y, x1 - x0 - 1, headerH - 2);
+    ctx.fillStyle = "#aaa";
+    ctx.fillText(entries[s].name, midX, y + 9);
+    for (let x = x0; x < x1 && x < barX + barW; x++) {
+      const t = (x - x0) / (x1 - x0 - 1 || 1);
+      const [r,g,b] = sampleEntryGradient(entries[s], t);
+      ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+      ctx.fillRect(x, barY + 1, 1, barH - 2);
+    }
+  }
+}
+
+function renderCircleRow(ctx, entries, y, rowH, barX, barW) {
+  const headerH = NAME_H;
+  const circH = rowH - headerH;
+  const circY = y + headerH;
+  const n = entries.length || 1;
+  const spacing = barW / n;
+  const radius = Math.min(spacing, circH) * 0.3;
+  const cy = circY + circH / 2;
+  ctx.font = "9px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  for (let s = 0; s < entries.length; s++) {
+    const cx = barX + s * spacing + spacing / 2;
+    const segX0 = Math.floor(barX + s * spacing);
+    const segX1 = Math.floor(barX + (s + 1) * spacing);
+    ctx.fillStyle = "#111118";
+    ctx.fillRect(segX0, y, segX1 - segX0 - 1, headerH - 2);
+    ctx.fillStyle = "#aaa";
+    ctx.fillText(entries[s].name, cx, y + 9);
+    for (let dy = -Math.ceil(radius); dy <= Math.ceil(radius); dy++) {
+      for (let dx = -Math.ceil(radius); dx <= Math.ceil(radius); dx++) {
+        const px = Math.round(cx + dx);
+        const py = Math.round(cy + dy);
+        if (px < barX || px >= barX + barW || py < circY || py >= circY + circH) continue;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > radius) continue;
+        const t = dist / radius;
+        const [r, g, b] = sampleEntryGradient(entries[s], t);
+        ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  }
+}
+
+function renderStripes() {
+  const canvas = document.getElementById('previewStripes');
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth - 4;
+  const H = presets.length * ROW_H;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  presets.forEach((p, pi) => {
+    const y = pi * ROW_H;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, y, LABEL_W, ROW_H - 1);
+    ctx.fillStyle = p.id === activePresetId ? "#e94560" : "#888";
+    ctx.font = (p.id === activePresetId ? "bold " : "") + "9px system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(p.name, LABEL_W - 4, y + NAME_H + 8);
+
+    const barX = LABEL_W;
+    const barW = W - barX;
+    renderStripeRow(ctx, p.colors, y, ROW_H, barX, barW);
+  });
+}
+
+function renderCircles() {
+  const canvas = document.getElementById('previewCircles');
+  const wrap = canvas.parentElement;
+  const W = wrap.clientWidth - 4;
+  const H = presets.length * CIRCLEROW_H;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  presets.forEach((p, pi) => {
+    const y = pi * CIRCLEROW_H;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, y, LABEL_W, CIRCLEROW_H - 1);
+    ctx.fillStyle = p.id === activePresetId ? "#e94560" : "#888";
+    ctx.font = (p.id === activePresetId ? "bold " : "") + "9px system-ui, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(p.name, LABEL_W - 4, y + NAME_H + 8);
+
+    const barX = LABEL_W;
+    const barW = W - barX;
+    renderCircleRow(ctx, p.colors, y, CIRCLEROW_H, barX, barW);
+  });
+}
+
+function renderAll() {
+  renderStripes();
+  renderCircles();
+}
+
+function switchPreviewTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('.tab[data-tab="' + name + '"]').classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'stripes') renderStripes();
+  else renderCircles();
+}
+
+function saveAll() {
+  const data = presets.map(p => ({
+    name: p.name,
+    colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation }))
+  }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'palette.json';
+  a.click();
+}
+
+function loadAll() {
+  document.getElementById('fileInput').click();
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      let data = JSON.parse(ev.target.result);
+      presets = data.map((p, i) => ({
+        id: "p" + (i + 1),
+        name: p.name,
+        colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation }))
+      }));
+      nextId = presets.length + 1;
+      activePresetId = presets[0]?.id || null;
+      renderAll();
+    } catch { alert('Invalid palette file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function exportPNG() {
+  const W = parseInt(document.getElementById('expW').value) || 512;
+  const shape = document.getElementById('expShape').value;
+  if (presets.length === 0) { alert('No presets'); return; }
+
+  const rowH = shape === 'stripe' ? ROW_H : CIRCLEROW_H;
+  const H = presets.length * rowH;
+  const barX = 0;
+  const barW = W;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  presets.forEach((p, pi) => {
+    const y = pi * rowH;
+    if (shape === 'stripe') {
+      renderStripeRow(ctx, p.colors, y, rowH, barX, barW);
+    } else {
+      renderCircleRow(ctx, p.colors, y, rowH, barX, barW);
+    }
+  });
+
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'palette_' + shape + '_' + W + 'x' + H + '.png';
+  a.click();
+}
+
+function restoreDefaults() {
+  if (!confirm("Reset all presets to defaults? Custom changes will be lost.")) return;
+  init();
+}
+
+function init() {
+  presets = INITIAL_PRESETS.map((p, i) => ({ id: "p" + (i + 1), ...p }));
+  nextId = presets.length + 1;
+  activePresetId = presets[0].id;
+  renderPresetTabs();
+  renderPalette();
+}
+
+init();
+</script>
+</body>
+</html>
