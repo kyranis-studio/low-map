@@ -66,6 +66,10 @@ input[type="file"] { display: none; }
 .preset-actions button { background: #0f3460; border: 1px solid #444; color: #bbb; padding: 3px 10px; border-radius: 4px; cursor: pointer; font-size: 0.78rem; }
 .preset-actions button:hover { border-color: #e94560; color: #fff; }
 .empty-msg { color: #666; text-align: center; padding: 20px; font-size: 0.9rem; }
+.color-card-header input[type="checkbox"] { accent-color: #e94560; cursor: pointer; margin-right: 4px; }
+.color-card.disabled { opacity: 0.45; }
+.btn-invert { font-size: 0.85rem; }
+.btn-invert.active { background: #e94560; }
 </style>
 </head>
 <body>
@@ -145,6 +149,7 @@ function sampleEntryGradient(entry, t) {
   const { colorA, colorB } = getEntryColors(entry);
   const [r1,g1,b1] = hexToRgb(colorA);
   const [r2,g2,b2] = hexToRgb(colorB);
+  if (entry.inverted) t = 1 - t;
   return [lerp(r1,r2,t), lerp(g1,g2,t), lerp(b1,b2,t)];
 }
 
@@ -277,7 +282,18 @@ function setActivePreset(id) {
 function addColorToActive() {
   const p = getPresetById(activePresetId);
   if (!p) return;
-  p.colors.push({ name: "New Color", base: "#808080", variation: 20 });
+  p.colors.push({ name: "New Color", base: "#808080", variation: 20, enabled: true, inverted: false });
+  renderPalette();
+  renderAll();
+}
+
+function duplicateColor(pid, idx) {
+  const p = getPresetById(pid);
+  if (!p) return;
+  const orig = p.colors[idx];
+  if (!orig) return;
+  const copy = { ...orig, name: orig.name + " copy" };
+  p.colors.splice(idx + 1, 0, copy);
   renderPalette();
   renderAll();
 }
@@ -325,9 +341,23 @@ function updateVariation(pid, idx, value) {
     card.querySelector('.var-val').textContent = Math.round(c.variation) + '%';
     const { colorA, colorB } = getEntryColors(c);
     const swatch = card.querySelector('.mini-swatch');
-    if (swatch) swatch.style.background = 'linear-gradient(to bottom,' + colorA + ',' + colorB + ')';
+    if (swatch) swatch.style.background = 'linear-gradient(to bottom,' + (c.inverted ? colorB : colorA) + ',' + (c.inverted ? colorA : colorB) + ')';
   }
   renderAll();
+}
+
+function setColorEnabled(pid, idx, enabled) {
+  const p = getPresetById(pid);
+  if (!p || !p.colors[idx]) return;
+  p.colors[idx].enabled = enabled;
+  renderPalette();
+}
+
+function toggleInvert(pid, idx) {
+  const p = getPresetById(pid);
+  if (!p || !p.colors[idx]) return;
+  p.colors[idx].inverted = !p.colors[idx].inverted;
+  renderPalette();
 }
 
 function renderPresetTabs() {
@@ -362,14 +392,18 @@ function renderPalette() {
   el.innerHTML = '';
   p.colors.forEach((c, i) => {
     const { colorA, colorB } = getEntryColors(c);
+    const swatchGrad = 'linear-gradient(to bottom,' + (c.inverted ? colorB : colorA) + ',' + (c.inverted ? colorA : colorB) + ')';
     const card = document.createElement('div');
-    card.className = 'color-card';
+    card.className = 'color-card' + (c.enabled === false ? ' disabled' : '');
     card.innerHTML = [
       '<div class="color-card-header">',
+      '  <input type="checkbox" ' + (c.enabled !== false ? 'checked' : '') + ' onchange="setColorEnabled(\'' + p.id + '\',' + i + ',this.checked)" title="Include in preview/export">',
       '  <input class="name-input" value="' + c.name.replace(/'/g, "\\'") + '" onchange="updateColor(\'' + p.id + '\',' + i + ',\'name\',this.value)" placeholder="Color name">',
       '  <div class="color-card-controls">',
+      '    <button class="btn-invert' + (c.inverted ? ' active' : '') + '" onclick="toggleInvert(\'' + p.id + '\',' + i + ')" title="Invert gradient">&#x21C5;</button>',
       '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',-1)" title="Move left">&lsaquo;</button>',
       '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',1)" title="Move right">&rsaquo;</button>',
+      '    <button onclick="duplicateColor(\'' + p.id + '\',' + i + ')" title="Duplicate">++</button>',
       '    <button class="danger" onclick="removeColor(\'' + p.id + '\',' + i + ')" title="Remove">&times;</button>',
       '  </div>',
       '</div>',
@@ -385,7 +419,7 @@ function renderPalette() {
       '  <input type="range" min="0" max="100" value="' + c.variation + '" oninput="updateVariation(\'' + p.id + '\',' + i + ',this.value)">',
       '  <span class="var-val">' + Math.round(c.variation) + '%</span>',
       '</div>',
-      '<div class="mini-swatch" style="background:linear-gradient(to bottom,' + colorA + ',' + colorB + ')"></div>',
+      '<div class="mini-swatch" style="background:' + swatchGrad + '"></div>',
     ].join('');
     el.appendChild(card);
   });
@@ -460,14 +494,14 @@ function renderCircleRow(ctx, entries, y, rowH, barX, barW) {
     ctx.fillStyle = "#aaa";
     ctx.fillText(entries[s].name, cx, y + 9);
     for (let dy = -Math.ceil(radius); dy <= Math.ceil(radius); dy++) {
-      const t = (dy + radius) / (2 * radius);
-      const [r, g, b] = sampleEntryGradient(entries[s], t);
       for (let dx = -Math.ceil(radius); dx <= Math.ceil(radius); dx++) {
         const px = Math.round(cx + dx);
         const py = Math.round(cy + dy);
         if (px < barX || px >= barX + barW || py < circY || py >= circY + circH) continue;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > radius) continue;
+        const t = dist / radius;
+        const [r, g, b] = sampleEntryGradient(entries[s], t);
         ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
         ctx.fillRect(px, py, 1, 1);
       }
@@ -496,7 +530,7 @@ function renderStripes() {
 
     const barX = LABEL_W;
     const barW = W - barX;
-    renderStripeRow(ctx, p.colors, y, ROW_H, barX, barW);
+    renderStripeRow(ctx, p.colors.filter(c => c.enabled !== false), y, ROW_H, barX, barW);
   });
 }
 
@@ -521,7 +555,7 @@ function renderCircles() {
 
     const barX = LABEL_W;
     const barW = W - barX;
-    renderCircleRow(ctx, p.colors, y, CIRCLEROW_H, barX, barW);
+    renderCircleRow(ctx, p.colors.filter(c => c.enabled !== false), y, CIRCLEROW_H, barX, barW);
   });
 }
 
@@ -542,7 +576,7 @@ function switchPreviewTab(name) {
 function saveAll() {
   const data = presets.map(p => ({
     name: p.name,
-    colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation }))
+    colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation, enabled: c.enabled !== false, inverted: !!c.inverted }))
   }));
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -565,7 +599,7 @@ function handleFile(e) {
       presets = data.map((p, i) => ({
         id: "p" + (i + 1),
         name: p.name,
-        colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation }))
+    colors: p.colors.map(c => ({ name: c.name, base: c.base, variation: c.variation, enabled: c.enabled !== false, inverted: !!c.inverted }))
       }));
       nextId = presets.length + 1;
       activePresetId = presets[0]?.id || null;
@@ -593,10 +627,11 @@ function exportPNG() {
 
   presets.forEach((p, pi) => {
     const y = pi * rowH;
+    const colors = p.colors.filter(c => c.enabled !== false);
     if (shape === 'stripe') {
-      renderStripeRow(ctx, p.colors, y, rowH, barX, barW);
+      renderStripeRow(ctx, colors, y, rowH, barX, barW);
     } else {
-      renderCircleRow(ctx, p.colors, y, rowH, barX, barW);
+      renderCircleRow(ctx, colors, y, rowH, barX, barW);
     }
   });
 
