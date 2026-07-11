@@ -16,7 +16,7 @@ header .actions { display: flex; gap: 8px; }
 .preset-tab { background: #0f3460; border: 1px solid #444; color: #bbb; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; gap: 5px; }
 .preset-tab:hover { border-color: #e94560; color: #fff; }
 .preset-tab.active { background: #e94560; border-color: #e94560; color: #fff; }
-.preset-tab .close-btn { background: none; border: none; color: inherit; cursor: pointer; font-size: 0.8rem; opacity: 0.6; padding: 0 2px; line-height: 1; }
+.preset-tab .close-btn { background: none; border: none; color: inherit; cursor: pointer; opacity: 0.6; padding: 0 2px; line-height: 1; display: flex; align-items: center; }
 .preset-tab .close-btn:hover { opacity: 1; }
 .preset-tab .name-input-tab { background: transparent; border: none; color: inherit; font-size: 0.8rem; width: 60px; outline: none; }
 .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-bottom: 12px; }
@@ -25,7 +25,7 @@ header .actions { display: flex; gap: 8px; }
 .color-card-header .name-input { background: transparent; border: 1px solid #555; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 0.85rem; width: 140px; }
 .color-card-header .name-input:focus { outline: none; border-color: #e94560; }
 .color-card-controls { display: flex; gap: 3px; }
-.color-card-controls button { background: #0f3460; border: none; color: #fff; cursor: pointer; border-radius: 3px; width: 24px; height: 24px; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; }
+.color-card-controls button { background: #0f3460; border: none; color: #fff; cursor: pointer; border-radius: 3px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
 .color-card-controls button:hover { background: #e94560; }
 .color-card-controls button.danger:hover { background: #c0392b; }
 .color-row { display: flex; gap: 10px; align-items: center; margin-bottom: 4px; }
@@ -68,7 +68,6 @@ input[type="file"] { display: none; }
 .empty-msg { color: #666; text-align: center; padding: 20px; font-size: 0.9rem; }
 .color-card-header input[type="checkbox"] { accent-color: #e94560; cursor: pointer; margin-right: 4px; }
 .color-card.disabled { opacity: 0.45; }
-.btn-invert { font-size: 0.85rem; }
 .btn-invert.active { background: #e94560; }
 </style>
 </head>
@@ -92,7 +91,7 @@ input[type="file"] { display: none; }
   <div id="presetActions" class="preset-actions"></div>
 
   <div id="palette" class="palette-grid"></div>
-  <button class="add-btn" onclick="addColorToActive()">+ Add Color</button>
+  <button class="add-btn" onclick="addColorToActive()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:4px"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg> Add Color</button>
 
   <div class="tabs">
     <button class="tab active" data-tab="stripes" onclick="switchPreviewTab('stripes')">Stripes</button>
@@ -366,14 +365,14 @@ function renderPresetTabs() {
   presets.forEach(p => {
     const tab = document.createElement('button');
     tab.className = 'preset-tab' + (p.id === activePresetId ? ' active' : '');
-    tab.innerHTML = '<span>' + p.name + '</span><span class="close-btn" onclick="event.stopPropagation();removePreset(\'' + p.id + '\')">&times;</span>';
+    tab.innerHTML = '<span>' + p.name + '</span><span class="close-btn" onclick="event.stopPropagation();removePreset(\'' + p.id + '\')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg></span>';
     tab.onclick = () => setActivePreset(p.id);
     tab.title = 'Click to edit, close to remove';
     el.appendChild(tab);
   });
   const addBtn = document.createElement('button');
   addBtn.className = 'preset-tab';
-  addBtn.textContent = '+ New Slot';
+  addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="vertical-align:-2px;margin-right:3px"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg> New Slot';
   addBtn.onclick = () => {
     const name = prompt("Preset name:", "New Slot");
     if (name) addPreset(name);
@@ -400,11 +399,11 @@ function renderPalette() {
       '  <input type="checkbox" ' + (c.enabled !== false ? 'checked' : '') + ' onchange="setColorEnabled(\'' + p.id + '\',' + i + ',this.checked)" title="Include in preview/export">',
       '  <input class="name-input" value="' + c.name.replace(/'/g, "\\'") + '" onchange="updateColor(\'' + p.id + '\',' + i + ',\'name\',this.value)" placeholder="Color name">',
       '  <div class="color-card-controls">',
-      '    <button class="btn-invert' + (c.inverted ? ' active' : '') + '" onclick="toggleInvert(\'' + p.id + '\',' + i + ')" title="Invert gradient">&#x21C5;</button>',
-      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',-1)" title="Move left">&lsaquo;</button>',
-      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',1)" title="Move right">&rsaquo;</button>',
-      '    <button onclick="duplicateColor(\'' + p.id + '\',' + i + ')" title="Duplicate">++</button>',
-      '    <button class="danger" onclick="removeColor(\'' + p.id + '\',' + i + ')" title="Remove">&times;</button>',
+      '    <button class="btn-invert' + (c.inverted ? ' active' : '') + '" onclick="toggleInvert(\'' + p.id + '\',' + i + ')" title="Invert gradient"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="14"/><polyline points="4,5 8,2 12,5"/><polyline points="4,11 8,14 12,11"/></svg></button>',
+      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',-1)" title="Move left"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="10,3 5,8 10,13"/></svg></button>',
+      '    <button onclick="moveColor(\'' + p.id + '\',' + i + ',1)" title="Move right"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,3 11,8 6,13"/></svg></button>',
+      '    <button onclick="duplicateColor(\'' + p.id + '\',' + i + ')" title="Duplicate"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M5 11H3.5A1.5 1.5 0 0 1 2 9.5v-7A1.5 1.5 0 0 1 3.5 1h7A1.5 1.5 0 0 1 12 2.5V5"/></svg></button>',
+      '    <button class="danger" onclick="removeColor(\'' + p.id + '\',' + i + ')" title="Remove"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg></button>',
       '  </div>',
       '</div>',
       '<div class="color-row">',
